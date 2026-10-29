@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<title>Libreta de Barras</title>
+<meta name="theme-color" content="#F5F5F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D0E10" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Herramienta de escritura: superficies neutras, un rojo de "grabando" como acento, rimas en tonos de subrayador. Una columna, barra de pestañas abajo. */
+:root{
+  --bg:#F5F5F3; --surface:#FFFFFF; --surface2:#ECECE8; --ink:#111214; --ink2:#5E616A; --ink3:#9A9CA3; --line:#E3E3DE;
+  --accent:#E0402F; --accent-soft:rgba(224,64,47,.10); --accent-ink:#FFFFFF; --ok:#1F9D55;
+  --h0:#FFE66B; --h1:#8AF0C0; --h2:#FFB3D1; --h3:#A3D9FF; --h4:#FFC58A; --h5:#D4BCFF; --now:rgba(224,64,47,.09);
+  --shadow:0 1px 2px rgba(17,18,20,.05),0 4px 16px rgba(17,18,20,.06);
+  --f-ui:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-lyric:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --navh:64px; --abh:56px; --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D0E10; --surface:#16171A; --surface2:#202126; --ink:#F1F1EE; --ink2:#A2A5AD; --ink3:#6C6F77; --line:#26282D;
+  --accent:#FF5B4A; --accent-soft:rgba(255,91,74,.14); --accent-ink:#FFFFFF; --ok:#3DD68C;
+  --h0:rgba(255,230,107,.30); --h1:rgba(138,240,192,.26); --h2:rgba(255,179,209,.28); --h3:rgba(163,217,255,.28); --h4:rgba(255,197,138,.28); --h5:rgba(212,188,255,.30); --now:rgba(255,91,74,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D0E10; --surface:#16171A; --surface2:#202126; --ink:#F1F1EE; --ink2:#A2A5AD; --ink3:#6C6F77; --line:#26282D;
+  --accent:#FF5B4A; --accent-soft:rgba(255,91,74,.14); --accent-ink:#FFFFFF; --ok:#3DD68C;
+  --h0:rgba(255,230,107,.30); --h1:rgba(138,240,192,.26); --h2:rgba(255,179,209,.28); --h3:rgba(163,217,255,.28); --h4:rgba(255,197,138,.28); --h5:rgba(212,188,255,.30); --now:rgba(255,91,74,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+  color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+html{padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--bg)}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-user-select:none;user-select:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+svg.i.f{fill:currentColor;stroke:none}
+.px{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:680px;margin:0 auto}
+
+/* Barra superior */
+.appbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
+.appbar.scrolled{border-bottom-color:var(--line)}
+.appbar .in{height:var(--abh);display:flex;align-items:center;gap:6px}
+.ab-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em;flex:1;min-width:0}
+.ab-brand img{width:28px;height:28px;border-radius:8px}
+.ab-title{flex:1;min-width:0;border:0;background:transparent;font-weight:700;font-size:17px;letter-spacing:-.01em;padding:8px 4px;border-radius:8px;text-overflow:ellipsis}
+.ab-title:focus{background:var(--surface2);outline:none}
+.ab-title::placeholder{color:var(--ink3)}
+.iconbtn{width:40px;height:40px;border-radius:12px;border:0;background:transparent;display:inline-grid;place-items:center;color:var(--ink);flex:none}
+.iconbtn:active{background:var(--surface2)}
+.saved{font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.saved i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+
+/* Títulos grandes */
+.lt{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:6px 14px}
+.lt h1{margin:0;font-size:32px;line-height:1.05;font-weight:800;letter-spacing:-.025em}
+.lt p{margin:4px 0 0;color:var(--ink2);font-size:14px}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:12px;padding:0 12px;height:42px;color:var(--ink3);margin-bottom:14px}
+.search input{border:0;background:transparent;flex:1;min-width:0;height:100%;outline:none;color:var(--ink);font-size:15px}
+.search input::placeholder{color:var(--ink3)}
+
+/* Listas */
+.list{display:grid;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.song{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:12px 14px;text-align:left;width:100%;border:1px solid var(--line)}
+.song:active{transform:scale(.99)}
+.song .av{grid-row:1/3;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:17px;color:var(--ink);background:var(--surface2)}
+.song .t{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+.song .p{grid-column:2/4;color:var(--ink2);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song .m{color:var(--ink3);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 6px;margin-left:8px;vertical-align:2px}
+.group{margin-top:28px}
+.group h3{margin:0 0 8px 4px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.rowbtn{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;background:transparent;text-align:left;font-weight:600}
+.rowbtn + .rowbtn{border-top:1px solid var(--line)}
+.rowbtn span{flex:1}
+.rowbtn > span:first-child{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:var(--surface2)}
+.rowbtn small{display:block;font-weight:400;color:var(--ink2);font-size:13px}
+.note{color:var(--ink2);font-size:13px;margin:10px 4px 0}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(var(--navh) + 18px + env(safe-area-inset-bottom,0px));z-index:25;height:54px;padding:0 20px 0 16px;border-radius:18px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(224,64,47,.35)}
+.fab:active{transform:scale(.97)}
+
+/* Reproductor */
+.transport{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--abh));z-index:20;background:var(--bg);padding-block:4px 10px}
+.player{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:10px 12px}
+.play{width:44px;height:44px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);display:grid;place-items:center}
+.play:disabled{opacity:.35}
+.play svg{width:18px;height:18px}
+.tp-mid{min-width:0;display:grid;gap:4px}
+.tp-top{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.tp-top .bn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tp-top .tm{color:var(--ink3);font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--ink) var(--p,0%),var(--surface2) var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--ink);margin-top:-5px}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--surface2)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--ink)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--ink)}
+.barbox{text-align:center;min-width:46px}
+.barbox small{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:700}
+.barbox b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+.recbtn{width:44px;height:44px;border-radius:50%;border:2px solid var(--accent);background:transparent;display:grid;place-items:center}
+.recbtn i{width:18px;height:18px;border-radius:50%;background:var(--accent);transition:border-radius .2s,width .2s,height .2s}
+.recbtn.live{background:var(--accent-soft);animation:ring 1.4s infinite}
+.recbtn.live i{border-radius:4px;width:16px;height:16px}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(224,64,47,.45)}100%{box-shadow:0 0 0 12px rgba(224,64,47,0)}}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-top:10px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;font-weight:600;color:var(--ink)}
+.chip svg.i{width:16px;height:16px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip input{width:38px;border:0;background:transparent;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;padding:0;outline:none}
+.chip label{color:var(--ink2);font-weight:500}
+.status{font-size:12.5px;color:var(--ink2);padding:8px 2px 0}
+.status.live{color:var(--accent);font-weight:600}
+
+/* Editor */
+.ed{display:grid;grid-template-columns:28px minmax(0,1fr) 46px;padding-block:6px 10px}
+.bars,.gut{position:relative}
+.bars i{position:absolute;right:8px;font-style:normal;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums;line-height:30px}
+.gut span{position:absolute;right:0;display:flex;align-items:center;justify-content:flex-end;gap:5px;font-size:11.5px;font-weight:600;line-height:30px;font-variant-numeric:tabular-nums;color:var(--ink3)}
+.gut span.over{color:var(--accent)}
+.gut span u{width:8px;height:8px;border-radius:50%;text-decoration:none;background:var(--surface2)}
+.field{position:relative;min-width:0}
+.mirror,.field textarea{font-family:var(--f-lyric);font-size:15.5px;line-height:30px;padding:0 6px;margin:0;border:0;white-space:pre-wrap;overflow-wrap:break-word;letter-spacing:-.01em;tab-size:4}
+.mirror{position:absolute;inset:0;color:transparent;pointer-events:none}
+.mirror div{min-height:30px;border-radius:6px}
+.mirror mark{color:transparent;border-radius:4px;padding:2px 0}
+.mirror .sec{display:inline-block;background:var(--surface2);border-radius:6px;padding:0 2px}
+.mirror .now{background:var(--now)}
+.field textarea{position:relative;display:block;width:100%;background:transparent;resize:none;overflow:hidden;min-height:50vh;caret-color:var(--accent);outline:none}
+.field textarea::placeholder{color:var(--ink3)}
+.h0{background:var(--h0)!important}.h1{background:var(--h1)!important}.h2{background:var(--h2)!important}.h3{background:var(--h3)!important}.h4{background:var(--h4)!important}.h5{background:var(--h5)!important}
+.stats{display:flex;flex-wrap:wrap;gap:6px 16px;border-top:1px solid var(--line);padding-top:12px;font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.stats b{color:var(--ink);font-weight:700}
+details.help{margin-top:10px;font-size:13px;color:var(--ink2)}
+details.help summary{cursor:pointer;font-weight:600;color:var(--ink);list-style:none;display:flex;align-items:center;gap:6px}
+details.help summary::-webkit-details-marker{display:none}
+details.help p{margin:8px 0 0;line-height:1.55}
+.section-h{display:flex;align-items:center;justify-content:space-between;margin:28px 0 10px}
+.section-h h2{margin:0;font-size:18px;font-weight:800;letter-spacing:-.015em}
+.take{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px}
+.take + .take{border-top:1px solid var(--line)}
+.take .tp{width:40px;height:40px;border-radius:50%;border:0;background:var(--surface2);display:grid;place-items:center}
+.take .tp svg{width:16px;height:16px}
+.take .tn{font-weight:700;font-size:14.5px}
+.take .tn small{display:block;font-weight:400;color:var(--ink2);font-size:12.5px;font-variant-numeric:tabular-nums}
+.take .acts{display:flex;gap:2px}
+
+/* Ideas */
+.composer{padding:12px;display:grid;gap:10px}
+.composer textarea{border:0;background:transparent;resize:none;min-height:56px;font-family:var(--f-lyric);font-size:15.5px;line-height:1.6;outline:none}
+.composer textarea::placeholder{color:var(--ink3)}
+.composer .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.btn{height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--accent)}
+.idea{padding:14px;display:grid;gap:10px}
+.idea p{margin:0;font-family:var(--f-lyric);font-size:15px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.idea .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.idea .row small{color:var(--ink3);font-size:12px}
+.empty{text-align:center;padding:36px 20px;color:var(--ink2);font-size:14px}
+.empty svg.i{width:32px;height:32px;color:var(--ink3);margin-bottom:6px}
+
+/* Menú */
+.menu{position:fixed;z-index:50;top:calc(env(safe-area-inset-top,0px) + var(--abh) - 4px);right:max(12px,env(safe-area-inset-right,0px));min-width:220px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:0;background:transparent;border-radius:10px;text-align:left;font-weight:600;font-size:14.5px}
+.menu button:active{background:var(--surface2)}
+.menu .danger{color:var(--accent)}
+.scrim{position:fixed;inset:0;z-index:45}
+
+/* Hoja de rimas */
+.sheet{position:fixed;left:0;right:0;bottom:var(--sb,calc(var(--navh) + env(safe-area-inset-bottom,0px)));z-index:35;background:var(--surface);border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.12);max-height:48vh;display:flex;flex-direction:column}
+body.typing .sheet{--sb:0px}
+.sheet .in{max-width:680px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1;padding-block:8px 10px}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 2px}
+.sheet .hd{display:flex;gap:8px;align-items:center}
+.sheet .q{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:12px;padding:0 12px;height:42px;color:var(--ink3)}
+.sheet .q input{border:0;background:transparent;flex:1;min-width:0;outline:none;font-family:var(--f-lyric);font-size:15.5px;color:var(--ink)}
+.sheet .body{overflow-y:auto;min-height:0;flex:1}
+.rinfo{font-size:12.5px;color:var(--ink2);margin:0}
+.rinfo b{color:var(--ink)}
+.vow{font-family:var(--f-lyric);letter-spacing:.08em}
+.rsect{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin:14px 0 6px}
+.rrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+.rrow em{font-style:normal;font-size:11px;color:var(--ink3);width:28px;font-variant-numeric:tabular-nums}
+.rw{height:32px;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:0 10px;font-family:var(--f-lyric);font-size:14.5px}
+.rw.cons{border-color:var(--ink);font-weight:500}
+.rw.multi{background:var(--h0);border-color:transparent;color:var(--ink)}
+.credit{font-size:10.5px;color:var(--ink3);margin:12px 0 0}
+
+/* Pestañas */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+body.typing .nav,body.typing .fab{display:none}
+.nav .in{max-width:680px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);height:var(--navh)}
+.nav button{border:0;background:transparent;color:var(--ink3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:600}
+.nav button svg.i{width:22px;height:22px}
+.nav button[aria-current="page"]{color:var(--ink)}
+.nav button[aria-current="page"] .pill{background:var(--surface2)}
+.nav .pill{width:56px;height:30px;border-radius:15px;display:grid;place-items:center;transition:background .2s}
+main{padding-bottom:calc(var(--navh) + 96px + env(safe-area-inset-bottom,0px))}
+body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 20px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head><body>
+
+<header class="appbar" id="appbar"><div class="in page px">
+  <button class="iconbtn" id="back" aria-label="Volver a temas" hidden data-ic="back"></button>
+  <div class="ab-brand" id="brand"><img src="icon-192.png" alt=""><span>Libreta de Barras</span></div>
+  <input class="ab-title" id="title" placeholder="Título del tema" autocomplete="off" hidden>
+  <span class="saved" id="saved"><i></i>Guardado</span>
+  <button class="iconbtn" id="more" aria-label="Más opciones" hidden data-ic="dots"></button>
+</div></header>
+
+<main>
+  <section class="view page px" id="v-temas">
+    <div class="lt"><div><h1>Temas</h1><p id="songCount"></p></div></div>
+    <label class="search"><span data-ic="search"></span><input id="q" type="search" placeholder="Buscar en tus letras" autocomplete="off"></label>
+    <div class="list" id="songs"></div>
+    <div class="group">
+      <h3>Copia de seguridad</h3>
+      <div class="card">
+        <button class="rowbtn" id="bExport"><span data-ic="download"></span><span>Guardar copia<small>Descarga tus letras e ideas en un archivo</small></span></button>
+        <button class="rowbtn" id="bImport"><span data-ic="upload"></span><span>Cargar copia<small>Añade las letras de otro móvil o del PC</small></span></button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <p class="note">Tus letras se guardan solo en este móvil. Saca una copia de vez en cuando y súbela a Drive o mándatela por WhatsApp.</p>
+    </div>
+  </section>
+
+  <section class="view page px" id="v-escribir" hidden>
+    <div class="transport">
+      <div class="card player">
+        <button class="play" id="play" aria-label="Reproducir" disabled data-ic="play"></button>
+        <div class="tp-mid">
+          <div class="tp-top"><span class="bn" id="beatName">Sin beat</span><span class="tm" id="time">0:00</span></div>
+          <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Posición del beat" disabled>
+        </div>
+        <div class="barbox"><small>Compás</small><b id="barNow">–</b></div>
+        <button class="recbtn" id="rec" aria-label="Grabar voz"><i></i></button>
+      </div>
+      <div class="chips">
+        <button class="chip" id="loadBeat" data-ic="music">Cargar beat</button>
+        <span class="chip"><label for="bpm">BPM</label><input id="bpm" type="number" min="50" max="200" inputmode="numeric"></span>
+        <button class="chip" id="tap">Tap</button>
+        <span class="chip"><label for="intro">Intro</label><input id="intro" type="number" min="0" max="64" inputmode="numeric"></span>
+        <button class="chip" id="loop" data-ic="repeat">Bucle</button>
+        <button class="chip" id="bFollow" data-ic="follow">Seguir</button>
+      </div>
+      <input type="file" id="beatFile" accept="audio/*" hidden>
+      <div class="status" id="recMsg" hidden></div>
+    </div>
+
+    <div class="chips" style="padding-top:2px">
+      <button class="chip" id="bRimas" data-ic="search">Rimas</button>
+      <button class="chip" data-sec="Intro">+ Intro</button>
+      <button class="chip" data-sec="Verso">+ Verso</button>
+      <button class="chip" data-sec="Estribillo">+ Estribillo</button>
+      <button class="chip" data-sec="Puente">+ Puente</button>
+      <button class="chip" data-sec="Outro">+ Outro</button>
+    </div>
+
+    <div class="ed">
+      <div class="bars" id="bars"></div>
+      <div class="field"><div class="mirror" id="mirror" aria-hidden="true"></div>
+        <textarea id="ta" spellcheck="false" autocapitalize="sentences" placeholder="Escribe aquí. Cada línea es una barra (un compás).&#10;&#10;Las partes van entre corchetes: [Estribillo]"></textarea></div>
+      <div class="gut" id="gut"></div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <details class="help"><summary><span data-ic="info"></span>Cómo leer la libreta</summary>
+      <p>El número de la izquierda es el compás. A la derecha, las sílabas de cada barra: en rojo si son demasiadas para ir cómodo a este BPM. Las barras que riman entre sí llevan el mismo color en la última palabra.</p>
+      <p>Toca una palabra y pulsa <b>Rimas</b>. Si estás empezando una barra nueva, te salen rimas para la de arriba. <b>Intro</b> son los compases del beat antes de que entres a rapear: así la barra resaltada va a tiempo.</p>
+    </details>
+
+    <div id="takesBox" hidden>
+      <div class="section-h"><h2>Tomas</h2><span class="saved" id="takeCount"></span></div>
+      <div class="card" id="takeList"></div>
+    </div>
+  </section>
+
+  <section class="view page px" id="v-ideas" hidden>
+    <div class="lt"><div><h1>Ideas</h1><p>Frases, imágenes y punchlines para cuando te vengan.</p></div></div>
+    <div class="card composer">
+      <textarea id="ideaIn" placeholder="Apunta una idea…" rows="2"></textarea>
+      <div class="row"><small class="saved" id="ideaCount"></small><button class="btn pri" id="ideaAdd">Guardar idea</button></div>
+    </div>
+    <div class="list" id="ideas" style="margin-top:12px"></div>
+  </section>
+</main>
+
+<button class="fab" id="newSong" data-ic="plus">Nuevo tema</button>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="menu" id="menu" hidden>
+  <button id="mShare" data-ic="share">Compartir letra</button>
+  <button id="mCopy" data-ic="copy">Copiar letra</button>
+  <button class="danger" id="mDel" data-ic="trash">Borrar tema</button>
+</div>
+
+<div class="sheet px" id="sheet" hidden><div class="in">
+  <div class="grab"></div>
+  <div class="hd"><label class="q"><span data-ic="search"></span><input id="rq" placeholder="Palabra o final de frase" autocomplete="off" autocapitalize="none"></label>
+    <button class="chip" id="rPin" data-ic="pin">Fijar</button><button class="iconbtn" id="sheetX" aria-label="Cerrar" data-ic="x"></button></div>
+  <div class="body" id="sheetBody"></div>
+</div></div>
+
+<nav class="nav"><div class="in">
+  <button data-tab="temas"><span class="pill" data-ic="list"></span>Temas</button>
+  <button data-tab="escribir"><span class="pill" data-ic="pen"></span>Escribir</button>
+  <button data-tab="ideas"><span class="pill" data-ic="bulb"></span>Ideas</button>
+</div></nav>
+<div class="toast" id="toast" hidden></div>
+
+<script src="rimas.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+
+// ───── Sílabas y rimas en español (mismo motor que Lyrics de Pulso) ─────
+const STRONG = 'aeoáéíóú', WEAK = 'iuü', VOW = STRONG + WEAK;
+const plain = c => ({ á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ü: 'u' }[c] || c);
+function nuclei(w) {
+  const s = w.toLowerCase().replace(/[^a-záéíóúüñy]/g, ''); const out = []; let pv = false, pc = '';
+  for (let i = 0; i < s.length; i++) {
+    let c = s[i]; if (c === 'y') c = (i === s.length - 1 && i > 0) || s.length === 1 ? 'i' : 'y';
+    const v = VOW.includes(c);
+    if (v) { if (pv && (WEAK.includes(c) || WEAK.includes(pc))) out[out.length - 1].v += c; else out.push({ v: c, at: i }); }
+    pv = v; pc = c;
+  }
+  return { s, n: out };
+}
+function syllables(line) {
+  const ws = line.split(/\s+/).filter(w => /[a-záéíóúüñ0-9]/i.test(w)); let n = 0;
+  ws.forEach((w, i) => {
+    n += /^\d+$/.test(w) ? w.length : Math.max(1, nuclei(w).n.length);
+    const nx = ws[i + 1];
+    if (nx && /[aeiouáéíóúy]$/i.test(w.replace(/[^a-záéíóúüñy]/gi, '')) && /^h?[aeiouáéíóú]/i.test(nx.replace(/[^a-záéíóúüñh]/gi, ''))) n--;
+  });
+  return Math.max(0, n);
+}
+function wordInfo(w) {
+  const { s, n } = nuclei(w); if (!n.length) return null;
+  let t = n.findIndex(x => /[áéíóú]/.test(x.v));
+  if (t < 0) t = /[aeiouns]$/.test(s) && n.length > 1 ? n.length - 2 : n.length - 1;
+  const mi = x => { const a = [...x.v].findIndex(c => /[áéíóú]/.test(c)); if (a >= 0) return a; const f = [...x.v].findIndex(c => 'aeo'.includes(c)); return f >= 0 ? f : x.v.length - 1; };
+  const vow = n.map(x => plain(x.v[mi(x)]));
+  const from = n[t].at + mi(n[t]);
+  const tail = s.slice(from).replace(/[áéíóúü]/g, plain).replace(/h/g, '').replace(/v/g, 'b').replace(/ll/g, 'y').replace(/qu(?=[ei])/g, 'k').replace(/c(?=[aou]|$|[^ei])/g, 'k')
+    .replace(/c(?=[ei])/g, 'z').replace(/gu(?=[ei])/g, 'g').replace(/g(?=[ei])/g, 'j').replace(/x/g, 'ks').replace(/y$/, 'i');
+  return { s, vow, t, syl: n.length, aso: vow.slice(t).join('-'), cons: tail };
+}
+const lineWords = l => l.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-záéíóúüñy]/g, '')).filter(Boolean);
+function lineRhyme(l) { const ws = lineWords(l); if (!ws.length) return ''; const i = wordInfo(ws[ws.length - 1]); return i ? i.aso : ''; }
+let RW = null;
+function rhymes(text, max = 60) {
+  if (!RW) { const ws = RIMA_WORDS.split(' '); RW = ws.map(wordInfo); }
+  const words = lineWords(text); if (!words.length) return null;
+  const last = wordInfo(words[words.length - 1]); if (!last) return null;
+  let pre = []; words.slice(0, -1).forEach(w => { const i = wordInfo(w); if (i) pre = pre.concat(i.vow); });
+  const vow = pre.concat(last.vow), t = pre.length + last.t, tailV = vow.slice(t).join('-');
+  const p1 = t >= 1 ? vow[t - 1] : null, p2 = t >= 2 ? vow[t - 2] : null;
+  const cons = [], aso = [], m1 = [], m2 = [];
+  for (const I of RW) {
+    if (!I || I.s === last.s || I.aso !== tailV) continue;
+    const c = I.cons === last.cons, a1 = p1 && I.t >= 1 && I.vow[I.t - 1] === p1, a2 = a1 && p2 && I.t >= 2 && I.vow[I.t - 2] === p2;
+    if (a2) { if (m2.length < max) m2.push({ w: I.s, c, syl: I.syl }); } else if (a1 && m1.length < max) m1.push({ w: I.s, c, syl: I.syl });
+    if (c) { if (cons.length < max * 2) cons.push({ w: I.s, syl: I.syl }); } else if (aso.length < max * 2) aso.push({ w: I.s, syl: I.syl });
+  }
+  return { text: words.join(' '), vow, t, tailV, pre: [p2, p1].filter(Boolean), cons, aso, m1, m2 };
+}
+
+
+
+// ───── Iconos ─────
+const IC = {
+  back: '<path d="M15 18l-6-6 6-6"/>', dots: '<circle cx="12" cy="5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="12" cy="19" r="1.2" fill="currentColor"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+  download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>', upload: '<path d="M12 15V3M7 8l5-5 5 5M5 21h14"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+  follow: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="3"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  bulb: '<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>',
+  x: '<path d="M18 6L6 18M6 6l12 12"/>', pin: '<path d="M12 17v5"/><path d="M5 17h14l-2-4V5H7v8z"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/>',
+  play: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor" stroke="none"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>'
+};
+const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n] || ''}</svg>`;
+document.querySelectorAll('[data-ic]').forEach(e => e.insertAdjacentHTML('afterbegin', ic(e.dataset.ic)));
+function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, 2600); }
+
+// ───── Datos: temas e ideas (guardados en este móvil) ─────
+const EXAMPLE = { id: 's_ejemplo', example: true, title: 'Madrugada', bpm: 85, intro: 4, updated: 0, text:
+`[Verso 1]
+Madrugada en el cuarto, la libreta en la mesa
+cada barra que escribo es una vieja promesa
+el beat va despacio, ochenta y cinco de tempo
+y yo sigo buscando las palabras a tiempo
+la ciudad está dormida, yo despierto en el bloque
+con la tinta en los dedos esperando el toque
+no me sobran los medios, me sobran las ganas
+de cambiar la persiana por unas ventanas
+
+[Estribillo]
+Y si cae la noche, yo me quedo de pie
+con la voz en la mano y la fe que se ve
+` };
+const S = { songs: {}, ideas: [], cur: null, tab: 'temas' };
+const local = ls.get('libreta.v1', null);
+if (local) { S.songs = local.songs || {}; S.ideas = local.ideas || []; }
+S.cur = ls.get('libreta.cur', null); S.tab = ls.get('libreta.tab', 'temas');
+function saveLocal() { ls.set('libreta.v1', { songs: S.songs, ideas: S.ideas }); const s = $('saved'); s.lastChild.textContent = 'Guardado'; }
+const allSongs = () => { const a = Object.values(S.songs).sort((x, y) => y.updated - x.updated); return a.length ? a : [EXAMPLE]; };
+const getSong = id => S.songs[id] || (id === EXAMPLE.id ? EXAMPLE : null);
+const newId = () => 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+
+// ───── Navegación ─────
+function go(tab) {
+  S.tab = tab; ls.set('libreta.tab', tab);
+  ['temas', 'escribir', 'ideas'].forEach(t => { $('v-' + t).hidden = t !== tab; });
+  document.querySelectorAll('.nav button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
+  const ed = tab === 'escribir';
+  $('brand').hidden = ed; $('title').hidden = !ed; $('back').hidden = !ed; $('more').hidden = !ed; $('newSong').hidden = tab !== 'temas';
+  if (!ed) closeSheet();
+  if (ed) { if (!getSong(S.cur)) S.cur = allSongs()[0].id; loadEditor(); }
+  if (tab === 'temas') renderSongs();
+  if (tab === 'ideas') renderIdeas();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.nav button').forEach(b => b.onclick = () => go(b.dataset.tab));
+$('back').onclick = () => go('temas');
+window.addEventListener('scroll', () => $('appbar').classList.toggle('scrolled', scrollY > 4), { passive: true });
+// con el teclado abierto, se esconde la barra de abajo para dejar sitio
+document.addEventListener('focusin', e => { if (e.target.matches('textarea,input:not([type=range])')) document.body.classList.add('typing'); });
+document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !document.activeElement.matches('textarea,input:not([type=range])')) document.body.classList.remove('typing'); }, 60));
+
+// ───── Temas ─────
+function ago(ts) {
+  if (!ts) return 'ejemplo';
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return 'ahora'; if (m < 60) return 'hace ' + m + ' min'; const h = Math.round(m / 60); if (h < 24) return 'hace ' + h + ' h';
+  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+const isSec = l => /^\s*\[.*\]\s*$/.test(l);
+const barCount = t => t.split('\n').filter(l => l.trim() && !isSec(l)).length;
+function renderSongs() {
+  const box = $('songs'), q = $('q').value.trim().toLowerCase(); box.innerHTML = '';
+  const list = allSongs().filter(s => !q || ((s.title || '') + '\n' + (s.text || '')).toLowerCase().includes(q));
+  const n = Object.keys(S.songs).length;
+  $('songCount').textContent = n ? n + (n === 1 ? ' tema' : ' temas') : 'Empieza con el ejemplo o crea el tuyo';
+  list.forEach(s => {
+    const b = document.createElement('button'); b.className = 'card song';
+    const first = (s.text || '').split('\n').find(l => l.trim() && !isSec(l)) || 'Aún sin letra';
+    const ini = (s.title || '?').trim().charAt(0).toUpperCase() || '?';
+    b.innerHTML = `<span class="av">${esc(ini)}</span><span class="t">${esc(s.title || 'Sin título')}${s.example ? '<span class="badge">Ejemplo</span>' : ''}</span><span class="m">${barCount(s.text || '')} barras</span><span class="p">${esc(first)} · ${ago(s.updated)}</span>`;
+    b.onclick = () => { S.cur = s.id; ls.set('libreta.cur', s.id); go('escribir'); };
+    box.appendChild(b);
+  });
+  if (!list.length) box.innerHTML = `<div class="empty">${ic('search')}<div>Ningún tema contiene «${esc(q)}»</div></div>`;
+}
+$('q').addEventListener('input', renderSongs);
+$('newSong').onclick = () => {
+  const id = newId(), last = allSongs()[0];
+  S.songs[id] = { id, title: '', text: '[Verso 1]\n', bpm: last && !last.example ? last.bpm : 90, intro: 0, updated: Date.now() };
+  saveLocal(); S.cur = id; ls.set('libreta.cur', id); go('escribir'); setTimeout(() => $('title').focus(), 60);
+};
+
+// ───── Editor ─────
+const ta = $('ta'), mirror = $('mirror');
+function curSong(write) {
+  let s = getSong(S.cur);
+  if (s && s.example && write) { const id = newId(); s = S.songs[id] = { ...EXAMPLE, id, example: false }; S.cur = id; ls.set('libreta.cur', id); }
+  return s;
+}
+function loadEditor() {
+  const s = getSong(S.cur); if (!s) return;
+  $('title').value = s.title || ''; ta.value = s.text || ''; $('bpm').value = s.bpm || 90; $('intro').value = s.intro || 0;
+  layout(); loadBeatFor(s.id); renderTakes();
+}
+let saveT = null;
+function touch() {
+  const s = curSong(true); if (!s) return;
+  s.title = $('title').value.trim(); s.text = ta.value; s.bpm = +$('bpm').value || 90; s.intro = Math.max(0, +$('intro').value || 0); s.updated = Date.now();
+  $('saved').lastChild.textContent = 'Guardando…';
+  clearTimeout(saveT); saveT = setTimeout(saveLocal, 400);
+}
+let rows = [];
+function layout() {
+  ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
+  const lines = ta.value.split('\n');
+  const cnt = {}; lines.forEach(l => { if (l.trim() && !isSec(l)) { const r = lineRhyme(l); if (r) cnt[r] = (cnt[r] || 0) + 1; } });
+  const col = {}; let k = 0; Object.keys(cnt).filter(r => cnt[r] > 1).forEach(r => { col[r] = 'h' + (k++ % 6); });
+  let bar = 0, stanzas = 0, inSt = false, syl = 0;
+  const bpm = +$('bpm').value || 90, cap = Math.round(14 * Math.min(1.4, Math.max(0.7, 90 / bpm)));
+  rows = lines.map(l => {
+    if (!l.trim()) { inSt = false; return { l, bar: null }; }
+    if (isSec(l)) { inSt = false; return { l, sec: true, bar: null }; }
+    if (!inSt) { stanzas++; inSt = true; }
+    bar++; const rh = lineRhyme(l), sy = syllables(l); syl += sy;
+    return { l, bar, syl: sy, rh, c: col[rh], over: sy > cap };
+  });
+  mirror.innerHTML = rows.map((r, i) => {
+    if (r.sec) return `<div><span class="sec">${esc(r.l)}</span></div>`;
+    if (!r.l) return '<div> </div>';
+    let html = esc(r.l);
+    if (r.c) { const m = r.l.match(/^(.*?)(\S+)(\s*)$/); if (m) html = esc(m[1]) + `<mark class="${r.c}">${esc(m[2])}</mark>` + esc(m[3]); }
+    return `<div>${html}</div>`;
+  }).join('');
+  const ds = mirror.children, bh = [], gh = [];
+  rows.forEach((r, i) => {
+    const d = ds[i]; r.top = d.offsetTop; r.el = d;
+    if (r.bar) {
+      bh.push(`<i style="top:${r.top}px">${r.bar}</i>`);
+      gh.push(`<span class="${r.over ? 'over' : ''}" style="top:${r.top}px">${r.syl}<u class="${r.c || ''}"></u></span>`);
+    }
+  });
+  $('bars').innerHTML = bh.join(''); $('gut').innerHTML = gh.join('');
+  const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  $('stats').innerHTML = bar ? `<span><b>${bar}</b> barras</span><span><b>${stanzas}</b> ${stanzas === 1 ? 'estrofa' : 'estrofas'}</span><span><b>${Math.round(syl / bar)}</b> sílabas por barra</span>${top && top[1] > 1 ? `<span>rima más usada <b class="vow">${top[0]}</b></span>` : ''}<span>cómodo a ${bpm} BPM: hasta <b>${cap}</b></span>` : '<span>Empieza a escribir y aquí verás el resumen del tema.</span>';
+  markNow(true);
+}
+let layT = 0;
+ta.addEventListener('input', () => { cancelAnimationFrame(layT); layT = requestAnimationFrame(layout); touch(); });
+$('title').addEventListener('input', touch);
+$('bpm').addEventListener('change', () => { touch(); layout(); });
+$('intro').addEventListener('change', () => { touch(); markNow(true); });
+window.addEventListener('resize', () => { if (S.tab === 'escribir') layout(); });
+document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
+  const name = b.dataset.sec, n = name === 'Verso' ? ' ' + ((ta.value.match(/\[Verso/gi) || []).length + 1) : '';
+  if (document.activeElement !== ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  const before = ta.value.slice(0, ta.selectionStart);
+  const pre = !before ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+  insertText(pre + '[' + name + n + ']\n');
+});
+function insertText(t) {
+  ta.focus(); const a = ta.selectionStart, b = ta.selectionEnd;
+  ta.setRangeText(t, a, b, 'end'); ta.dispatchEvent(new Event('input'));
+}
+// Menú del tema
+function menu(open) { $('menu').hidden = !open; $('scrim').hidden = !open; $('mDel').lastChild.textContent = 'Borrar tema'; delete $('mDel').dataset.ask; }
+$('more').onclick = () => menu(true); $('scrim').onclick = () => menu(false);
+const lyricText = () => { const s = getSong(S.cur); return (s.title ? s.title.toUpperCase() + '\n\n' : '') + ta.value.trim() + '\n'; };
+$('mShare').onclick = async () => { menu(false); try { if (navigator.share) { await navigator.share({ title: getSong(S.cur).title || 'Letra', text: lyricText() }); return; } } catch (e) { if (e && e.name === 'AbortError') return; } copyLyric(); };
+$('mCopy').onclick = () => { menu(false); copyLyric(); };
+function copyLyric() { navigator.clipboard.writeText(lyricText()).then(() => toast('Letra copiada'), () => toast('No se pudo copiar')); }
+$('mDel').onclick = () => {
+  const b = $('mDel');
+  if (!b.dataset.ask) { b.dataset.ask = 1; b.lastChild.textContent = 'Toca otra vez para borrar'; return; }
+  const id = S.cur; menu(false);
+  if (S.songs[id]) { delete S.songs[id]; saveLocal(); toast('Tema borrado'); }
+  S.cur = null; go('temas');
+};
+
+// ───── Beat ─────
+const audio = new Audio(); audio.preload = 'auto';
+let follow = ls.get('libreta.follow', true), playing = false, nowRow = -1;
+const setPlayIcon = () => { $('play').innerHTML = ic(playing ? 'pause' : 'play'); $('play').setAttribute('aria-label', playing ? 'Pausa' : 'Reproducir'); };
+$('bFollow').classList.toggle('on', follow);
+$('bFollow').onclick = () => { follow = !follow; ls.set('libreta.follow', follow); $('bFollow').classList.toggle('on', follow); };
+$('loadBeat').onclick = () => $('beatFile').click();
+$('beatFile').onchange = e => { const f = e.target.files[0]; if (f) { const name = f.name.replace(/\.[^.]+$/, ''); setBeat(f, name); idbPut(f, name); } e.target.value = ''; };
+function setBeat(blob, name) {
+  if (audio.src) URL.revokeObjectURL(audio.src);
+  audio.src = URL.createObjectURL(blob); $('beatName').textContent = name; $('play').disabled = false; $('seek').disabled = false;
+  $('loadBeat').lastChild.textContent = 'Cambiar beat';
+}
+const fmt = t => (isFinite(t) ? Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0') : '0:00');
+$('play').onclick = () => { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); };
+audio.onplay = () => { playing = true; setPlayIcon(); tick(); };
+audio.onpause = () => { playing = false; setPlayIcon(); };
+audio.onloadedmetadata = () => tick();
+$('loop').onclick = () => { audio.loop = !audio.loop; $('loop').classList.toggle('on', audio.loop); };
+let seeking = false;
+$('seek').addEventListener('input', () => { seeking = true; if (audio.duration) audio.currentTime = $('seek').value / 1000 * audio.duration; $('seek').style.setProperty('--p', $('seek').value / 10 + '%'); tick(true); });
+$('seek').addEventListener('change', () => { seeking = false; });
+function tick(once) {
+  const bpm = +$('bpm').value || 90, bar = Math.floor(audio.currentTime * bpm / 240) - (+$('intro').value || 0) + 1;
+  $('barNow').textContent = audio.src ? (bar >= 1 ? bar : String(bar - 1)) : '–';
+  $('time').textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
+  if (!seeking && audio.duration) { const v = Math.round(audio.currentTime / audio.duration * 1000); $('seek').value = v; $('seek').style.setProperty('--p', v / 10 + '%'); }
+  markNow();
+  if (playing && once !== true) requestAnimationFrame(() => tick());
+}
+function markNow(force) {
+  const bpm = +$('bpm').value || 90, intro = +$('intro').value || 0;
+  const b = audio.src && (playing || audio.currentTime > 0) ? Math.floor(audio.currentTime * bpm / 240) - intro + 1 : 0;
+  const i = rows.findIndex(r => r.bar === b);
+  if (i === nowRow && !force) return;
+  if (rows[nowRow] && rows[nowRow].el) rows[nowRow].el.classList.remove('now');
+  nowRow = i;
+  if (i >= 0 && rows[i].el) {
+    rows[i].el.classList.add('now');
+    if (follow && playing && !force && document.activeElement !== ta) { const r = rows[i].el.getBoundingClientRect(); if (r.top < 200 || r.bottom > innerHeight * 0.6) window.scrollBy({ top: r.top - innerHeight * 0.38, behavior: 'smooth' }); }
+  }
+}
+let taps = [];
+$('tap').onclick = () => {
+  const t = performance.now(); taps = taps.filter(x => t - x < 3000); taps.push(t);
+  if (taps.length >= 3) { const d = (taps[taps.length - 1] - taps[0]) / (taps.length - 1); $('bpm').value = Math.round(60000 / d); touch(); layout(); }
+};
+
+// Beats y tomas se guardan en este móvil (IndexedDB)
+let DBP = null;
+function dbOpen() {
+  if (!DBP) DBP = new Promise(res => { try { const r = indexedDB.open('libreta', 2);
+    r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('beat')) d.createObjectStore('beat'); if (!d.objectStoreNames.contains('takes')) d.createObjectStore('takes', { keyPath: 'id' }); };
+    r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch { res(null); } });
+  return DBP;
+}
+async function idbDo(store, mode, fn) {
+  const d = await dbOpen(); if (!d) return null;
+  return new Promise(res => { try { const tx = d.transaction(store, mode), st = tx.objectStore(store), q = fn(st); tx.oncomplete = () => res(q && q.result !== undefined ? q.result : true); tx.onerror = () => res(null); } catch { res(null); } });
+}
+const idbPut = (blob, name) => { idbDo('beat', 'readwrite', st => { st.put({ blob, name }, 'last'); if (S.cur) st.put({ blob, name }, S.cur); }); };
+async function loadBeatFor(id) {
+  const r = (await idbDo('beat', 'readonly', st => st.get(id))) || (!audio.src ? await idbDo('beat', 'readonly', st => st.get('last')) : null);
+  if (r && r.blob && r.name !== $('beatName').textContent) setBeat(r.blob, r.name);
+}
+
+// ───── Grabar voz sobre el beat ─────
+const R = { mr: null, stream: null, chunks: [], start: 0, t0: 0, timer: 0 };
+function recStatus(t, live) { const el = $('recMsg'); el.hidden = !t; el.textContent = t || ''; el.classList.toggle('live', !!live); }
+$('rec').onclick = async () => {
+  if (R.mr) { R.mr.stop(); return; }
+  try {
+    R.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) { recStatus('Sin permiso para el micrófono. Actívalo en Ajustes → Apps → Chrome → Permisos.'); return; }
+  const type = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+  R.chunks = []; R.mr = new MediaRecorder(R.stream, type ? { mimeType: type, audioBitsPerSecond: 160000 } : undefined);
+  R.mr.ondataavailable = e => { if (e.data.size) R.chunks.push(e.data); };
+  R.mr.onstop = async () => {
+    clearInterval(R.timer); R.stream.getTracks().forEach(t => t.stop());
+    const blob = new Blob(R.chunks, { type: R.mr.mimeType || 'audio/webm' }), dur = (performance.now() - R.t0) / 1000;
+    if (audio.src && !audio.paused) audio.pause();
+    R.mr = null; $('rec').classList.remove('live'); $('rec').setAttribute('aria-label', 'Grabar voz'); recStatus('');
+    const s = curSong(true); if (!s) return; touch();
+    const n = ((await idbDo('takes', 'readonly', st => st.getAll())) || []).filter(t => t.song === s.id).length + 1;
+    await idbDo('takes', 'readwrite', st => st.put({ id: 't' + Date.now().toString(36), song: s.id, n, blob, start: R.start, dur, ts: Date.now(), beat: audio.src ? $('beatName').textContent : '' }));
+    toast('Toma ' + n + ' guardada'); renderTakes();
+  };
+  R.start = audio.src ? audio.currentTime : 0;
+  R.mr.start(); R.t0 = performance.now();
+  if (audio.src && audio.paused) audio.play().catch(() => {});
+  $('rec').classList.add('live'); $('rec').setAttribute('aria-label', 'Parar grabación');
+  const upd = () => recStatus('Grabando ' + fmt((performance.now() - R.t0) / 1000) + ' · usa auriculares para que no se cuele el beat', true);
+  upd(); R.timer = setInterval(upd, 500);
+};
+let takeAudio = null;
+async function renderTakes() {
+  const s = getSong(S.cur), box = $('takeList'); if (!s) return;
+  const list = ((await idbDo('takes', 'readonly', st => st.getAll())) || []).filter(t => t.song === s.id).sort((a, b) => b.ts - a.ts);
+  $('takesBox').hidden = !list.length; box.innerHTML = '';
+  $('takeCount').textContent = list.length + (list.length === 1 ? ' toma' : ' tomas');
+  list.forEach(t => {
+    const d = document.createElement('div'); d.className = 'take';
+    d.innerHTML = `<button class="tp" aria-label="Escuchar">${ic('play')}</button><span class="tn">Toma ${t.n}<small>${fmt(t.dur)} · ${ago(t.ts)}${t.beat ? ' · con beat' : ''}</small></span><span class="acts"><button class="iconbtn" data-a="dl" aria-label="Guardar en el móvil">${ic('download')}</button><button class="iconbtn" data-a="del" aria-label="Borrar toma">${ic('trash')}</button></span>`;
+    const pb = d.querySelector('.tp');
+    pb.onclick = () => {
+      const stopAll = () => { if (takeAudio) { takeAudio.pause(); URL.revokeObjectURL(takeAudio.src); takeAudio = null; } audio.pause(); document.querySelectorAll('.take .tp').forEach(b => b.innerHTML = ic('play')); };
+      const was = takeAudio && takeAudio.dataset.id; stopAll(); if (was === t.id) return;
+      takeAudio = new Audio(URL.createObjectURL(t.blob)); takeAudio.dataset.id = t.id;
+      if (audio.src && t.beat) { audio.currentTime = t.start; audio.play().catch(() => {}); }
+      takeAudio.play().catch(() => {}); pb.innerHTML = ic('stop');
+      takeAudio.onended = stopAll;
+    };
+    d.querySelector('[data-a="dl"]').onclick = () => {
+      const a = document.createElement('a'), ext = /mp4/.test(t.blob.type) ? 'm4a' : /ogg/.test(t.blob.type) ? 'ogg' : 'webm';
+      a.href = URL.createObjectURL(t.blob); a.download = `${(s.title || 'tema').replace(/[^\wáéíóúñ -]/gi, '')} - toma ${t.n}.${ext}`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+      toast('Guardada en Descargas');
+    };
+    const del = d.querySelector('[data-a="del"]');
+    del.onclick = async () => {
+      if (!del.dataset.ask) { del.dataset.ask = 1; toast('Toca otra vez la papelera para borrar la toma'); setTimeout(() => delete del.dataset.ask, 3000); return; }
+      await idbDo('takes', 'readwrite', st => st.delete(t.id)); toast('Toma borrada'); renderTakes();
+    };
+    box.appendChild(d);
+  });
+}
+
+// ───── Hoja de rimas ─────
+let sheetOpen = false, pinned = false;
+function openSheet() {
+  sheetOpen = true; $('sheet').hidden = false; $('bRimas').classList.add('on'); document.body.classList.add('sheet-open');
+  pinned = false; $('rPin').classList.remove('on'); const t = fromCaret(); $('rq').value = t; showRhymes(t);
+}
+function closeSheet() { sheetOpen = false; $('sheet').hidden = true; $('bRimas').classList.remove('on'); document.body.classList.remove('sheet-open'); }
+$('bRimas').onclick = () => (sheetOpen ? closeSheet() : openSheet());
+$('sheetX').onclick = closeSheet;
+$('rPin').onclick = () => { pinned = !pinned; $('rPin').classList.toggle('on', pinned); };
+$('rq').addEventListener('input', () => { pinned = true; $('rPin').classList.add('on'); showRhymes($('rq').value); });
+function fromCaret() {
+  const v = ta.value, a = ta.selectionStart, b = ta.selectionEnd;
+  if (b > a) { const sel = v.slice(a, b).trim(); if (sel && sel.split(/\s+/).length <= 5 && !sel.includes('\n')) return sel; }
+  const s = v.lastIndexOf('\n', a - 1) + 1, e = v.indexOf('\n', a) < 0 ? v.length : v.indexOf('\n', a);
+  const line = v.slice(s, e);
+  if (!v.slice(a, e).trim()) {
+    const before = v.slice(0, s).split('\n').reverse().find(l => l.trim() && !isSec(l));
+    if (!line.trim() && before) return before.trim().split(/\s+/).slice(-2).join(' ');
+    return line.trim().split(/\s+/).slice(-1)[0] || (before ? before.trim().split(/\s+/).slice(-2).join(' ') : '');
+  }
+  const left = v.slice(s, a).match(/[a-záéíóúüñ]*$/i)[0], right = v.slice(a, e).match(/^[a-záéíóúüñ]*/i)[0];
+  return left + right;
+}
+let lastQ = null;
+const followCaret = () => { if (sheetOpen && !pinned) { const t = fromCaret(); if (t && t !== lastQ) { $('rq').value = t; showRhymes(t); } } };
+['keyup', 'click', 'select'].forEach(ev => ta.addEventListener(ev, () => setTimeout(followCaret, 0)));
+function showRhymes(text) {
+  lastQ = text; const body = $('sheetBody'); body.innerHTML = '';
+  const Rr = text && text.trim() ? rhymes(text) : null;
+  if (!Rr) { body.innerHTML = '<p class="rinfo">Escribe una palabra o toca una de tu letra. Si estás empezando una barra nueva, salen rimas para la de arriba.</p>'; return; }
+  const vv = Rr.vow.map((x, i) => (i === Rr.t ? x.toUpperCase() : x)).join(' ');
+  body.insertAdjacentHTML('beforeend', `<p class="rinfo"><b>${esc(Rr.text)}</b> · vocales <span class="vow">${vv}</span> · toca una palabra para añadirla</p>`);
+  const sect = (title, items, cls) => {
+    if (!items.length) return;
+    body.insertAdjacentHTML('beforeend', `<div class="rsect">${title} · ${items.length}</div>`);
+    const by = {}; items.forEach(x => { const k = Math.min(x.syl, 5); (by[k] = by[k] || []).push(x); });
+    Object.keys(by).sort((a, b) => a - b).forEach(k => {
+      const row = document.createElement('div'); row.className = 'rrow';
+      row.innerHTML = `<em>${k == 5 ? '5+' : k} síl</em>`;
+      by[k].forEach(x => { const w = document.createElement('button'); w.className = 'rw' + (cls ? ' ' + cls : '') + (x.c ? ' cons' : ''); w.textContent = x.w; w.onclick = () => addWord(x.w); row.appendChild(w); });
+      body.appendChild(row);
+    });
+  };
+  if (Rr.pre.length >= 2) sect('Multisílabas · 2 vocales más', Rr.m2, 'multi');
+  if (Rr.pre.length >= 1) sect('Multisílabas · 1 vocal más', Rr.m1, 'multi');
+  sect('Consonantes · suenan igual', Rr.cons);
+  sect('Asonantes · mismas vocales', Rr.aso);
+  if (body.children.length === 1) body.insertAdjacentHTML('beforeend', '<p class="rinfo">No encuentro rimas para esto.</p>');
+  body.insertAdjacentHTML('beforeend', '<p class="credit">Diccionario: FrequencyWords (Hermit Dave, CC BY-SA 4.0) y an-array-of-spanish-words (MIT).</p>');
+}
+function addWord(w) { const before = ta.value.slice(0, ta.selectionStart); insertText((before && !/\s$/.test(before) ? ' ' : '') + w); }
+
+// ───── Ideas ─────
+function renderIdeas() {
+  const box = $('ideas'); box.innerHTML = '';
+  $('ideaCount').textContent = S.ideas.length ? S.ideas.length + (S.ideas.length === 1 ? ' idea' : ' ideas') : '';
+  if (!S.ideas.length) { box.innerHTML = `<div class="empty">${ic('bulb')}<div>Aún no tienes ideas guardadas.<br>Apunta arriba la primera frase que se te ocurra.</div></div>`; return; }
+  S.ideas.slice().sort((a, b) => b.ts - a.ts).forEach(it => {
+    const d = document.createElement('div'); d.className = 'card idea';
+    d.innerHTML = `<p></p><div class="row"><small>${ago(it.ts)}</small><span><button class="btn" data-a="use">Pasar al tema</button> <button class="iconbtn" data-a="del" aria-label="Borrar idea">${ic('trash')}</button></span></div>`;
+    d.querySelector('p').textContent = it.t;
+    d.querySelector('[data-a="use"]').onclick = () => {
+      const s = getSong(S.cur);
+      if (!s || s.example) $('newSong').click(); else go('escribir');
+      const v = ta.value; ta.focus(); ta.setSelectionRange(v.length, v.length);
+      insertText((v && !v.endsWith('\n') ? '\n' : '') + it.t + '\n'); toast('Idea añadida al final del tema');
+    };
+    const del = d.querySelector('[data-a="del"]');
+    del.onclick = () => {
+      if (!del.dataset.ask) { del.dataset.ask = 1; toast('Toca otra vez la papelera para borrar'); setTimeout(() => delete del.dataset.ask, 3000); return; }
+      S.ideas = S.ideas.filter(x => x.id !== it.id); saveLocal(); renderIdeas();
+    };
+    box.appendChild(d);
+  });
+}
+$('ideaAdd').onclick = () => {
+  const t = $('ideaIn').value.trim(); if (!t) { $('ideaIn').focus(); return; }
+  S.ideas.push({ id: 'i' + Date.now().toString(36), t, ts: Date.now() }); $('ideaIn').value = ''; saveLocal(); renderIdeas(); toast('Idea guardada');
+};
+
+// ───── Copia de seguridad ─────
+$('bExport').onclick = () => {
+  const data = JSON.stringify({ app: 'libreta-de-barras', v: 1, fecha: new Date().toISOString(), songs: S.songs, ideas: S.ideas }, null, 1);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  a.download = 'libreta-copia-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  toast('Copia guardada en Descargas');
+};
+$('bImport').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text()); if (!d.songs) throw 0;
+    let nS = 0, nI = 0;
+    for (const [id, x] of Object.entries(d.songs)) { const l = S.songs[id]; if (!l || (x.updated || 0) > (l.updated || 0)) { S.songs[id] = x; nS++; } }
+    const have = new Set(S.ideas.map(i => i.id)); (d.ideas || []).forEach(i => { if (!have.has(i.id)) { S.ideas.push(i); nI++; } });
+    saveLocal(); renderSongs(); toast(`Copia cargada: ${nS} temas y ${nI} ideas`);
+  } catch { toast('Ese archivo no es una copia de la Libreta'); }
+  e.target.value = '';
+};
+
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+go(S.tab === 'escribir' && !getSong(S.cur) ? 'temas' : S.tab);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S.tab === 'escribir') layout(); });
+</script>
+</body></html>
