@@ -213,6 +213,23 @@ body.typing .nav,body.typing .fab{display:none}
 main{padding-bottom:calc(var(--navh) + 96px + env(safe-area-inset-bottom,0px))}
 body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 20px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.sheet.tall{max-height:88vh}
+.latrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:12.5px;color:var(--ink2)}
+.latrow b{color:var(--ink)}
+.latrow .warn{color:var(--accent);font-weight:600}
+.cbar{padding:12px;display:grid;gap:8px;margin-bottom:10px}
+.ctrack{position:relative}
+.ctrack .fgrid > div{min-height:30px}
+.ticks{position:absolute;inset:0;pointer-events:none}
+.ticks i{position:absolute;top:14px;bottom:3px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--ink2)}
+.ticks i.ok{background:var(--ok)}
+.ticks i.off{background:var(--accent)}
+.csum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0 12px}
+.csum div{background:var(--surface2);border-radius:12px;padding:10px;display:grid;gap:2px}
+.csum b{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.csum small{font-size:11.5px;color:var(--ink2);line-height:1.3}
+.calib{display:grid;gap:10px;padding:6px 0 12px}
+.calib p{margin:0;font-size:14px;line-height:1.5}
 .gut span.syl{cursor:pointer;border-radius:6px;padding-left:4px}
 .gut span.syl:active{background:var(--surface2)}
 .sylrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
@@ -259,8 +276,8 @@ body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
 .fgrid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .fgrid > div{border-left:1px solid var(--line);min-height:44px;display:grid;grid-template-rows:12px 1fr;justify-items:center;padding:3px 0 4px;min-width:0}
 .fgrid > div:first-child{border-left:0}
-.fgrid > div.q{border-left:1.5px solid var(--ink3)}
-.fgrid > div:first-child.q{border-left:0}
+.fgrid > div.qb{border-left:1.5px solid var(--ink3)}
+.fgrid > div:first-child.qb{border-left:0}
 .fgrid b{width:8px;height:8px;margin-top:2px}
 .fgrid b.k{border-radius:50%;background:var(--ink)}
 .fgrid b.s{border-radius:2px;background:var(--accent)}
@@ -386,6 +403,12 @@ body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
   <button class="danger" id="mDel" data-ic="trash">Borrar tema</button>
 </div>
 
+<div class="sheet px tall" id="chkSheet" hidden><div class="in">
+  <div class="grab"></div>
+  <div class="hd"><div style="flex:1;min-width:0"><div class="sylsum" id="chkHead"></div></div><button class="iconbtn" id="chkX" aria-label="Cerrar" data-ic="x"></button></div>
+  <div class="latrow" id="latRow"></div>
+  <div class="body" id="chkBody"></div>
+</div></div>
 <div class="sheet px" id="sylSheet" hidden><div class="in">
   <div class="grab"></div>
   <div class="hd"><div style="flex:1;min-width:0"><div class="sylsum" id="sylSum"></div></div><button class="iconbtn" id="sylX" aria-label="Cerrar" data-ic="x"></button></div>
@@ -407,6 +430,7 @@ body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
 
 <script src="rimas.js"></script>
 <script src="beat.js"></script>
+<script src="voice.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -869,7 +893,7 @@ function renderFlow() {
     const grid = cells.map((ids, st) => {
       const k = d.k[st] > 0, s = d.s[st] > 0, mk = k && s ? '<b class="ks"></b>' : k ? '<b class="k"></b>' : s ? '<b class="s"></b>' : '<b></b>';
       const txt = ids.map(i => `<span class="${i === ri ? 'r ' + (r.c || 'h0') : (s || k) ? 'on' : ''}">${esc(parts[i])}</span>`).join('');
-      return `<div class="${st % 4 === 0 ? 'q' : ''}">${mk}<div style="display:grid;align-content:center;gap:1px">${txt}</div></div>`;
+      return `<div class="${st % 4 === 0 ? 'qb' : ''}">${mk}<div style="display:grid;align-content:center;gap:1px">${txt}</div></div>`;
     }).join('');
     // mensajes
     const rate = ri / Math.max(1, T), lw = lineWords(r.l).pop() || '';
@@ -921,12 +945,14 @@ $('rec').onclick = async () => {
     R.mr = null; $('rec').classList.remove('live'); $('rec').setAttribute('aria-label', 'Grabar voz'); recStatus('');
     const s = curSong(true); if (!s) return; touch();
     const n = ((await idbDo('takes', 'readonly', st => st.getAll())) || []).filter(t => t.song === s.id).length + 1;
-    await idbDo('takes', 'readwrite', st => st.put({ id: 't' + Date.now().toString(36), song: s.id, n, blob, start: R.start, dur, ts: Date.now(), beat: audio.src ? $('beatName').textContent : '' }));
+    await idbDo('takes', 'readwrite', st => st.put({ id: 't' + Date.now().toString(36), song: s.id, n, blob, start: R.sync ? R.sync.bt - (R.sync.perf - R.t0) / 1000 : 0, sync: !!R.sync, dur, ts: Date.now(), beat: audio.src ? $('beatName').textContent : '' }));
     toast('Toma ' + n + ' guardada'); renderTakes();
   };
-  R.start = audio.src ? audio.currentTime : 0;
-  R.mr.start(); R.t0 = performance.now();
-  if (audio.src && audio.paused) audio.play().catch(() => {});
+  R.mr.start(); R.t0 = performance.now(); R.sync = null;
+  if (audio.src) {
+    if (audio.paused) { audio.addEventListener('playing', () => { R.sync = { perf: performance.now(), bt: audio.currentTime }; }, { once: true }); audio.play().catch(() => {}); }
+    else R.sync = { perf: performance.now(), bt: audio.currentTime };
+  }
   $('rec').classList.add('live'); $('rec').setAttribute('aria-label', 'Parar grabación');
   const upd = () => recStatus('Grabando ' + fmt((performance.now() - R.t0) / 1000) + ' · usa auriculares para que no se cuele el beat', true);
   upd(); R.timer = setInterval(upd, 500);
@@ -939,16 +965,17 @@ async function renderTakes() {
   $('takeCount').textContent = list.length + (list.length === 1 ? ' toma' : ' tomas');
   list.forEach(t => {
     const d = document.createElement('div'); d.className = 'take';
-    d.innerHTML = `<button class="tp" aria-label="Escuchar">${ic('play')}</button><span class="tn">Toma ${t.n}<small>${fmt(t.dur)} · ${ago(t.ts)}${t.beat ? ' · con beat' : ''}</small></span><span class="acts"><button class="iconbtn" data-a="dl" aria-label="Guardar en el móvil">${ic('download')}</button><button class="iconbtn" data-a="del" aria-label="Borrar toma">${ic('trash')}</button></span>`;
+    d.innerHTML = `<button class="tp" aria-label="Escuchar">${ic('play')}</button><span class="tn">Toma ${t.n}<small>${fmt(t.dur)} · ${ago(t.ts)}${t.beat ? ' · con beat' : ''}</small></span><span class="acts"><button class="iconbtn" data-a="chk" aria-label="Comprobar sobre el beat">${ic('grid')}</button><button class="iconbtn" data-a="dl" aria-label="Guardar en el móvil">${ic('download')}</button><button class="iconbtn" data-a="del" aria-label="Borrar toma">${ic('trash')}</button></span>`;
     const pb = d.querySelector('.tp');
     pb.onclick = () => {
       const stopAll = () => { if (takeAudio) { takeAudio.pause(); URL.revokeObjectURL(takeAudio.src); takeAudio = null; } audio.pause(); document.querySelectorAll('.take .tp').forEach(b => b.innerHTML = ic('play')); };
       const was = takeAudio && takeAudio.dataset.id; stopAll(); if (was === t.id) return;
       takeAudio = new Audio(URL.createObjectURL(t.blob)); takeAudio.dataset.id = t.id;
-      if (audio.src && t.beat) { audio.currentTime = t.start; audio.play().catch(() => {}); }
+      if (audio.src && t.beat) { audio.currentTime = Math.max(0, t.start); audio.play().catch(() => {}); if (t.start < 0) takeAudio.currentTime = -t.start; }
       takeAudio.play().catch(() => {}); pb.innerHTML = ic('stop');
       takeAudio.onended = stopAll;
     };
+    d.querySelector('[data-a="chk"]').onclick = () => openCheck(t);
     d.querySelector('[data-a="dl"]').onclick = () => {
       const a = document.createElement('a'), ext = /mp4/.test(t.blob.type) ? 'm4a' : /ogg/.test(t.blob.type) ? 'ogg' : 'webm';
       a.href = URL.createObjectURL(t.blob); a.download = `${(s.title || 'tema').replace(/[^\wáéíóúñ -]/gi, '')} - toma ${t.n}.${ext}`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
@@ -961,6 +988,104 @@ async function renderTakes() {
     };
     box.appendChild(d);
   });
+}
+
+// ───── Comprobar una toma sobre el beat ─────
+let chkTake = null, LAT = ls.get('libreta.lat', null);
+async function decodeMono(blob) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = await ctx.decodeAudioData(await blob.arrayBuffer()); try { ctx.close(); } catch {}
+  const n = buf.length, m = new Float32Array(n), ch = buf.numberOfChannels;
+  for (let c = 0; c < ch; c++) { const d = buf.getChannelData(c); for (let i = 0; i < n; i++) m[i] += d[i] / ch; }
+  return { x: m, sr: buf.sampleRate };
+}
+function openCheck(t) {
+  chkTake = t; closeSheet(); if (!$('sylSheet').hidden) closeSyl();
+  $('chkSheet').hidden = false; document.body.classList.add('sheet-open');
+  renderCheck();
+}
+$('chkX').onclick = () => { $('chkSheet').hidden = true; chkTake = null; document.body.classList.remove('sheet-open'); };
+function latRow() {
+  $('latRow').innerHTML = LAT == null
+    ? `<span class="warn">Sin calibrar:</span><span>los tiempos pueden salir corridos.</span><button class="chip sm" id="bCal">Calibrar (20 s)</button>`
+    : `<span>Retardo del móvil: <b>${LAT} ms</b></span><button class="chip sm" data-l="-10">−10</button><button class="chip sm" data-l="10">+10</button><button class="chip sm" id="bCal">Calibrar otra vez</button>`;
+  $('bCal').onclick = calibrate;
+  $('latRow').querySelectorAll('[data-l]').forEach(b => b.onclick = () => { LAT += +b.dataset.l; ls.set('libreta.lat', LAT); renderCheck(); });
+}
+async function renderCheck() {
+  const t = chkTake; if (!t) return;
+  latRow();
+  const body = $('chkBody');
+  $('chkHead').innerHTML = `<b>Toma ${t.n}</b> sobre el beat`;
+  if (!t.beat) { body.innerHTML = '<p class="rinfo">Esta toma se grabó sin beat. Carga el beat, ponlo y graba encima para poder compararla.</p>'; return; }
+  body.innerHTML = '<p class="rinfo">Escuchando tu toma…</p>';
+  let on;
+  try { const { x, sr } = await decodeMono(t.blob); on = detectOnsets(x, sr); } catch { body.innerHTML = '<p class="rinfo">No he podido leer esta toma.</p>'; return; }
+  const bpm = +$('bpm').value || 90, intro = +$('intro').value || 0, off = beatOff(), stepMs = 60000 / bpm / 4, lat = (LAT || 0) / 1000;
+  const hits = on.map(o => { const bt = t.start + o.t - lat, bf = (bt - off) * bpm / 240 - intro, bar = Math.floor(bf) + 1, pos = (bf - Math.floor(bf)) * 16; return { ...o, bar, pos, dev: (pos - Math.round(pos)) * stepMs }; });
+  const byBar = {}; hits.forEach(h => { (byBar[h.bar] = byBar[h.bar] || []).push(h); });
+  const bars = Object.keys(byBar).map(Number).filter(b => byBar[b].length >= 2).sort((a, b) => a - b);
+  if (!bars.length) { body.innerHTML = '<p class="rinfo">No oigo voz clara en esta toma. Graba un poco más cerca del micro.</p>'; return; }
+  const used = bars.flatMap(b => byBar[b]), devs = used.map(h => h.dev).sort((a, b) => a - b);
+  const med = devs[devs.length >> 1], inT = used.filter(h => Math.abs(h.dev) <= stepMs / 4).length / used.length;
+  const tend = Math.abs(med) <= 15 ? ['Clavado', 'vas justo en el tiempo'] : med > 0 ? [Math.round(med) + ' ms detrás', 'vas un pelín por detrás del beat (más relajado)'] : [Math.round(-med) + ' ms delante', 'vas un pelín por delante del beat (acelerado)'];
+  let html = `<div class="csum"><div><b>${Math.round(inT * 100)}%</b><small>golpes de voz en su sitio (±¼ de paso)</small></div><div><b>${tend[0]}</b><small>${tend[1]}</small></div><div><b>${bars.length}</b><small>${bars.length === 1 ? 'compás' : 'compases'} con voz</small></div></div>`;
+  bars.forEach(b => {
+    const hs = byBar[b], d = drumsFor(b), row = rows.find(r => r.bar === b);
+    const cells = Array.from({ length: 16 }, (_, st) => { const k = d.k[st] > 0, s = d.s[st] > 0; return `<div class="${st % 4 === 0 ? 'qb' : ''}">${k && s ? '<b class="ks"></b>' : k ? '<b class="k"></b>' : s ? '<b class="s"></b>' : '<b></b>'}</div>`; }).join('');
+    const ticks = hs.map(h => `<i class="${Math.abs(h.dev) <= stepMs / 4 ? 'ok' : Math.abs(h.dev) > stepMs / 2.5 ? 'off' : ''}" style="left:${((h.pos + 0.5) / 16 * 100).toFixed(2)}%"></i>`).join('');
+    const msgs = d.s.map((v, st) => (v ? st : -1)).filter(st => st >= 0 && st >= 2).map(st => {
+      const near = hs.reduce((a, h) => (Math.abs(h.pos - st) < Math.abs(a.pos - st) ? h : a), { pos: 99 });
+      const name = 'Caja del ' + (Math.floor(st / 4) + 1);
+      if (Math.abs(near.pos - st) > 1) return `<span>${name}: sin sílaba</span>`;
+      const ms = Math.round((near.pos - st) * stepMs);
+      return `<span>${name}: ${Math.abs(ms) <= 30 ? '<b style="color:var(--ok)">a tiempo</b>' : ms > 0 ? `<b>${ms} ms tarde</b>` : `<b>${-ms} ms antes</b>`}</span>`;
+    }).join('');
+    const written = row ? syllables(row.l) : null;
+    html += `<div class="card cbar"><div class="fb-top"><em>${b}</em><p>${row ? esc(row.l) : '<span class="muted2">(sin letra en este compás)</span>'}</p>${row && row.part ? `<span class="pill">${row.part.label}</span>` : ''}</div>
+      <div class="ctrack"><div class="fgrid">${cells}</div><div class="ticks">${ticks}</div></div>
+      <div class="fb-msg"><span>~${hs.length} golpes de voz${written != null ? ` · escritas ${written} sílabas` : ''}</span>${msgs}</div></div>`;
+  });
+  html += '<p class="credit">Verde: golpe en su sitio. Rojo: entre dos pasos. La app detecta golpes de voz, no sílabas exactas: úsalo como guía, junto a tu oído.</p>';
+  body.innerHTML = html;
+}
+// Calibrar: el móvil tarda un poco en sacar el sonido y en grabar; lo medimos con palmadas
+function clickWav(bpm, n, lead) {
+  const sr = 44100, gap = 60 / bpm, len = Math.ceil((lead + gap * n + 0.5) * sr), d = new Int16Array(len);
+  for (let i = 0; i < n; i++) { const o = Math.round((lead + i * gap) * sr), f = i < 4 ? 1500 : 1000; for (let j = 0; j < 1800 && o + j < len; j++) d[o + j] = Math.round(Math.sin(2 * Math.PI * f * j / sr) * Math.exp(-j / 300) * 26000); }
+  const buf = new ArrayBuffer(44 + len * 2), v = new DataView(buf), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + len * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, len * 2, true);
+  new Int16Array(buf, 44).set(d);
+  return new Blob([buf], { type: 'audio/wav' });
+}
+async function calibrate() {
+  const body = $('chkBody'), BPM = 100, N = 14, LEAD = 0.6, gap = 60 / BPM;
+  body.innerHTML = `<div class="calib"><p><b>Ponte los auriculares</b> (los mismos con los que grabas). Vas a oír ${N} clics: los 4 primeros más agudos son la cuenta; luego <b>da una palmada fuerte, o di «pa», justo en cada clic</b>.</p><button class="btn pri" id="calGo">Empezar</button></div>`;
+  $('calGo').onclick = async () => {
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+    catch { body.innerHTML = '<p class="rinfo">Sin permiso para el micrófono.</p>'; return; }
+    const player = new Audio(URL.createObjectURL(clickWav(BPM, N, LEAD))), chunks = [];
+    const mr = new MediaRecorder(stream); mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    let t0, sync = null;
+    body.innerHTML = '<p class="rinfo" style="font-size:15px"><b>Escuchando…</b> palmada en cada clic grave.</p>';
+    mr.start(); t0 = performance.now();
+    player.addEventListener('playing', () => { sync = { perf: performance.now(), bt: player.currentTime }; }, { once: true });
+    await player.play().catch(() => {});
+    await new Promise(r => { player.onended = r; setTimeout(r, (LEAD + gap * N + 1.5) * 1000); });
+    await new Promise(r => { mr.onstop = r; mr.stop(); }); stream.getTracks().forEach(tr => tr.stop());
+    try {
+      const { x, sr } = await decodeMono(new Blob(chunks, { type: mr.mimeType }));
+      const start = sync ? sync.bt - (sync.perf - t0) / 1000 : 0;
+      const on = detectOnsets(x, sr, { minGap: 0.2 }).map(o => start + o.t);
+      const diffs = [];
+      for (let i = 4; i < N; i++) { const c = LEAD + i * gap; const m = on.reduce((a, t) => (Math.abs(t - c) < Math.abs(a - c) ? t : a), 1e9); if (Math.abs(m - c) < 0.3) diffs.push(m - c); }
+      if (diffs.length < 5) { body.innerHTML = '<p class="rinfo">No he oído bien las palmadas. Prueba otra vez, más fuerte y cerca del micro.</p>'; return; }
+      diffs.sort((a, b) => a - b);
+      LAT = Math.round(diffs[diffs.length >> 1] * 1000); ls.set('libreta.lat', LAT);
+      toast('Calibrado: ' + LAT + ' ms'); renderCheck();
+    } catch { body.innerHTML = '<p class="rinfo">No he podido leer la grabación. Prueba otra vez.</p>'; }
+  };
 }
 
 // ───── Corregir sílabas ─────

@@ -1,6 +1,6 @@
 // Libreta de Barras: funciona sin internet. Sirve lo guardado y actualiza por detrás.
-const V = 'libreta-v5';
-const FILES = ['./', 'index.html', 'rimas.js', 'beat.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+const V = 'libreta-v6';
+const FILES = ['./', 'index.html', 'rimas.js', 'beat.js', 'voice.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
