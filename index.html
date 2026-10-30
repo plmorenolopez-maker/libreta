@@ -213,6 +213,17 @@ body.typing .nav,body.typing .fab{display:none}
 main{padding-bottom:calc(var(--navh) + 96px + env(safe-area-inset-bottom,0px))}
 body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 20px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.gut span.syl{cursor:pointer;border-radius:6px;padding-left:4px}
+.gut span.syl:active{background:var(--surface2)}
+.sylrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.sylrow:first-child{border-top:0}
+.sylrow b{font-family:var(--f-lyric);font-weight:500;font-size:15px}
+.sylrow small{grid-column:1;color:var(--ink2);font-family:var(--f-lyric);font-size:13px}
+.sylrow .ctl{grid-column:2;grid-row:1/3;display:flex;align-items:center;gap:4px}
+.sylrow .ctl b{min-width:22px;text-align:center;font-family:var(--f-ui);font-weight:800;font-variant-numeric:tabular-nums}
+.sylrow .ctl .mine{color:var(--accent)}
+.sylsum{font-size:13px;color:var(--ink2)}
+.sylsum b{color:var(--ink);font-size:18px}
 .gut span.seclen{color:var(--ink3);font-weight:500;font-size:10.5px}
 .secfit{padding:12px 14px;margin:4px 0 14px;display:grid;gap:8px}
 .secfit h3{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
@@ -345,6 +356,7 @@ body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
     <div class="stats" id="stats"></div>
     <details class="help"><summary><span data-ic="info"></span>Cómo leer la libreta</summary>
       <p>El número de la izquierda es el compás. A la derecha, las sílabas de cada barra: en rojo si son demasiadas para ir cómodo a este BPM. Las barras que riman entre sí llevan el mismo color en la última palabra.</p>
+      <p>¿Una barra cuenta mal? Toca su número de sílabas y corrige las palabras que tú dices distinto (por ejemplo «poeta» en 2).</p>
       <p>Toca una palabra y pulsa <b>Rimas</b>. Si estás empezando una barra nueva, te salen rimas para la de arriba. <b>Intro</b> son los compases del beat antes de que entres a rapear: así la barra resaltada va a tiempo.</p>
       <p>Al cargar un beat, la app saca el BPM, dónde caen bombo y caja y sus partes (intro, verso, estribillo, puente, outro). Si escribes <b>[Estribillo]</b>, esas barras se colocan donde empieza el estribillo del beat, y abajo ves si te faltan barras o te pasas.</p>
     </details>
@@ -374,6 +386,11 @@ body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
   <button class="danger" id="mDel" data-ic="trash">Borrar tema</button>
 </div>
 
+<div class="sheet px" id="sylSheet" hidden><div class="in">
+  <div class="grab"></div>
+  <div class="hd"><div style="flex:1;min-width:0"><div class="sylsum" id="sylSum"></div></div><button class="iconbtn" id="sylX" aria-label="Cerrar" data-ic="x"></button></div>
+  <div class="body" id="sylBody"></div>
+</div></div>
 <div class="sheet px" id="sheet" hidden><div class="in">
   <div class="grab"></div>
   <div class="hd"><label class="q"><span data-ic="search"></span><input id="rq" placeholder="Palabra o final de frase" autocomplete="off" autocapitalize="none"></label>
@@ -409,10 +426,14 @@ function nuclei(w) {
   }
   return { s, n: out };
 }
+// palabras que tú pronuncias distinto (las corriges tocando el número de sílabas)
+let DICT = ls.get('libreta.dict', {});
+const cleanW = w => w.toLowerCase().replace(/[^a-záéíóúüñy]/g, '');
+function wordSyl(w) { const c = cleanW(w); if (c && DICT[c]) return DICT[c]; return /^\d+$/.test(w) ? w.length : Math.max(1, nuclei(w).n.length); }
 function syllables(line) {
   const ws = line.split(/\s+/).filter(w => /[a-záéíóúüñ0-9]/i.test(w)); let n = 0;
   ws.forEach((w, i) => {
-    n += /^\d+$/.test(w) ? w.length : Math.max(1, nuclei(w).n.length);
+    n += wordSyl(w);
     const nx = ws[i + 1];
     if (nx && /[aeiouáéíóúy]$/i.test(w.replace(/[^a-záéíóúüñy]/gi, '')) && /^h?[aeiouáéíóú]/i.test(nx.replace(/[^a-záéíóúüñh]/gi, ''))) n--;
   });
@@ -630,7 +651,7 @@ function layout() {
     if (r.sec && r.secInfo && r.secInfo.part) gh.push(`<span class="seclen" style="top:${r.top}px">${r.secInfo.part.len} c.</span>`);
     if (r.bb != null) {
       bh.push(`<i style="top:${r.top}px">${r.bar}</i>`);
-      gh.push(`<span class="${r.over ? 'over' : ''}" style="top:${r.top}px">${r.syl}<u class="${r.c || ''}"></u></span>`);
+      gh.push(`<span class="syl${r.over ? ' over' : ''}" data-i="${i}" style="top:${r.top}px" role="button" aria-label="Corregir sílabas">${r.syl}<u class="${r.c || ''}"></u></span>`);
     }
   });
   $('bars').innerHTML = bh.join(''); $('gut').innerHTML = gh.join('');
@@ -798,11 +819,17 @@ function splitWord(s) {
   const out = []; let p = 0; cuts.forEach(c => { out.push(s.slice(p, c)); p = c; }); out.push(s.slice(p));
   return out.filter(Boolean);
 }
+function fitParts(sp, n) {
+  sp = sp.slice();
+  while (sp.length > n && sp.length > 1) { let j = sp.findIndex((p, i) => i < sp.length - 1 && /[aeiouáéíóú]$/.test(p) && /^[aeiouáéíóú]/.test(sp[i + 1])); if (j < 0) j = sp.length - 2; sp.splice(j, 2, sp[j] + sp[j + 1]); }
+  while (sp.length < n) { let j = 0; sp.forEach((p, i) => { if (p.length > sp[j].length) j = i; }); const p = sp[j], m = Math.max(1, Math.ceil(p.length / 2)); if (p.length < 2) break; sp.splice(j, 1, p.slice(0, m), p.slice(m)); }
+  return sp;
+}
 function lineSyl(line) {
   const words = line.split(/\s+/).map(w => w.toLowerCase().replace(/[^a-záéíóúüñy]/g, '')).filter(Boolean);
   const parts = []; let r = -1;
   words.forEach((w, wi) => {
-    const sp = splitWord(w);
+    const sp = DICT[w] ? fitParts(splitWord(w), DICT[w]) : splitWord(w);
     const prev = words[wi - 1];
     const merge = prev && /[aeiouáéíóúy]$/.test(prev) && /^h?[aeiouáéíóú]/.test(w) && parts.length;
     let base = parts.length;
@@ -936,9 +963,38 @@ async function renderTakes() {
   });
 }
 
+// ───── Corregir sílabas ─────
+let sylLine = null;
+$('gut').addEventListener('click', e => { const sp = e.target.closest('span.syl'); if (!sp) return; const r = rows[+sp.dataset.i]; if (r) openSyl(r.l); });
+function openSyl(line) {
+  sylLine = line; closeSheet(); $('sylSheet').hidden = false; document.body.classList.add('sheet-open'); renderSyl();
+}
+function closeSyl() { $('sylSheet').hidden = true; sylLine = null; if (!sheetOpen) document.body.classList.remove('sheet-open'); }
+$('sylX').onclick = closeSyl;
+function renderSyl() {
+  if (sylLine == null) return;
+  const words = sylLine.split(/\s+/).filter(w => cleanW(w)), seen = new Set(), body = $('sylBody');
+  const tot = syllables(sylLine), raw = words.reduce((a, w) => a + wordSyl(w), 0);
+  $('sylSum').innerHTML = `<b>${tot}</b> sílabas en esta barra${raw > tot ? ` · ${raw - tot} ${raw - tot === 1 ? 'sinalefa' : 'sinalefas'}` : ''}<br>Pon cuántas sílabas tiene cada palabra <i>como tú la dices</i>. Se aplica en todas tus letras.`;
+  body.innerHTML = '';
+  words.forEach(w => {
+    const c = cleanW(w); if (seen.has(c)) return; seen.add(c);
+    const auto = Math.max(1, nuclei(c).n.length), n = wordSyl(w), mine = !!DICT[c];
+    const row = document.createElement('div'); row.className = 'sylrow';
+    row.innerHTML = `<b>${esc(c)}</b><small>${esc(fitParts(splitWord(c), n).join('-'))}${mine ? ' · corregida (la app decía ' + auto + ')' : ''}</small><span class="ctl"><button class="iconbtn" data-d="-1" aria-label="Una sílaba menos">−</button><b class="${mine ? 'mine' : ''}">${n}</b><button class="iconbtn" data-d="1" aria-label="Una sílaba más">+</button>${mine ? '<button class="chip sm" data-d="0">Auto</button>' : ''}</span>`;
+    row.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+      const d = +b.dataset.d, v = d === 0 ? auto : Math.max(1, Math.min(9, n + d));
+      if (v === auto) delete DICT[c]; else DICT[c] = v;
+      ls.set('libreta.dict', DICT); renderSyl(); layout();
+    });
+    body.appendChild(row);
+  });
+}
+
 // ───── Hoja de rimas ─────
 let sheetOpen = false, pinned = false;
 function openSheet() {
+  if (!$('sylSheet').hidden) closeSyl();
   sheetOpen = true; $('sheet').hidden = false; $('bRimas').classList.add('on'); document.body.classList.add('sheet-open');
   pinned = false; $('rPin').classList.remove('on'); const t = fromCaret(); $('rq').value = t; showRhymes(t);
 }
@@ -1019,7 +1075,7 @@ $('ideaAdd').onclick = () => {
 
 // ───── Copia de seguridad ─────
 $('bExport').onclick = () => {
-  const data = JSON.stringify({ app: 'libreta-de-barras', v: 1, fecha: new Date().toISOString(), songs: S.songs, ideas: S.ideas }, null, 1);
+  const data = JSON.stringify({ app: 'libreta-de-barras', v: 1, fecha: new Date().toISOString(), songs: S.songs, ideas: S.ideas, dict: DICT }, null, 1);
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
   a.download = 'libreta-copia-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
   toast('Copia guardada en Descargas');
@@ -1032,6 +1088,7 @@ $('importFile').onchange = async e => {
     let nS = 0, nI = 0;
     for (const [id, x] of Object.entries(d.songs)) { const l = S.songs[id]; if (!l || (x.updated || 0) > (l.updated || 0)) { S.songs[id] = x; nS++; } }
     const have = new Set(S.ideas.map(i => i.id)); (d.ideas || []).forEach(i => { if (!have.has(i.id)) { S.ideas.push(i); nI++; } });
+    if (d.dict) { DICT = { ...d.dict, ...DICT }; ls.set('libreta.dict', DICT); }
     saveLocal(); renderSongs(); toast(`Copia cargada: ${nS} temas y ${nI} ideas`);
   } catch { toast('Ese archivo no es una copia de la Libreta'); }
   e.target.value = '';
