@@ -213,8 +213,20 @@ body.typing .nav,body.typing .fab{display:none}
 main{padding-bottom:calc(var(--navh) + 96px + env(safe-area-inset-bottom,0px))}
 body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 20px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.gut span.seclen{color:var(--ink3);font-weight:500;font-size:10.5px}
+.secfit{padding:12px 14px;margin:4px 0 14px;display:grid;gap:8px}
+.secfit h3{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.sf{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center}
+.sf-n{font-weight:700;font-size:14px}
+.sf-m{grid-column:1;font-size:12.5px;color:var(--ink2)}
+.sf .pill{grid-column:2;grid-row:1/3}
+.ptl{display:flex;gap:2px;height:30px;border-radius:8px;overflow:hidden}
+.ptl div{display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:var(--ink);min-width:0;overflow:hidden;white-space:nowrap;padding:0 2px}
+.ptl .Intro,.ptl .Outro{background:var(--surface2);color:var(--ink2)}
+.ptl .Verso{background:var(--h3)}.ptl .Estribillo{background:var(--h2)}.ptl .Puente{background:var(--h4)}.ptl .Loop,.ptl .Beat{background:var(--h1)}
+.ai-acts{display:flex;gap:8px;flex-wrap:wrap}
 .chip.sm{height:28px;padding:0 9px;font-size:12.5px;border-radius:8px}
-.ainfo{margin-top:10px;padding:10px 12px;display:grid;gap:8px}
+.ainfo{margin:0 0 10px;padding:10px 12px;display:grid;gap:8px}
 .ai-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--ink2)}
 .ai-top b{color:var(--ink)}
 .ai-x{display:flex;gap:6px;flex:none}
@@ -300,13 +312,15 @@ body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
         <button class="chip" id="bFollow" data-ic="follow">Seguir</button>
       </div>
       <input type="file" id="beatFile" accept="audio/*" hidden>
-      <div class="card ainfo" id="ainfo" hidden>
-        <div class="ai-top"><span id="aiText">Analizando el beat…</span><span class="ai-x"><button class="chip sm" id="bpmHalf">÷2</button><button class="chip sm" id="bpmDouble">×2</button></span></div>
-        <div class="pgrid" id="aiPat"></div>
-      </div>
       <div class="status" id="recMsg" hidden></div>
     </div>
 
+    <div class="card ainfo" id="ainfo" hidden>
+      <div class="ai-top"><span id="aiText">Analizando el beat…</span><span class="ai-x"><button class="chip sm" id="bpmHalf">÷2</button><button class="chip sm" id="bpmDouble">×2</button></span></div>
+      <div class="pgrid" id="aiPat"></div>
+      <div class="ptl" id="aiParts"></div>
+      <div class="ai-acts"><button class="chip sm" id="bStruct" hidden>Poner las partes del beat en la letra</button></div>
+    </div>
     <div class="chips" style="padding-top:2px">
       <button class="chip" id="bFlow" data-ic="grid">Flow</button>
       <button class="chip" id="bRimas" data-ic="search">Rimas</button>
@@ -327,10 +341,12 @@ body.sheet-open main{padding-bottom:calc(48vh + var(--navh) + 24px)}
       <div class="flow-hd"><span class="muted2" id="flowSrc"></span></div>
       <div id="flowList"></div>
     </div>
+    <div class="card secfit" id="secfit" hidden></div>
     <div class="stats" id="stats"></div>
     <details class="help"><summary><span data-ic="info"></span>Cómo leer la libreta</summary>
       <p>El número de la izquierda es el compás. A la derecha, las sílabas de cada barra: en rojo si son demasiadas para ir cómodo a este BPM. Las barras que riman entre sí llevan el mismo color en la última palabra.</p>
       <p>Toca una palabra y pulsa <b>Rimas</b>. Si estás empezando una barra nueva, te salen rimas para la de arriba. <b>Intro</b> son los compases del beat antes de que entres a rapear: así la barra resaltada va a tiempo.</p>
+      <p>Al cargar un beat, la app saca el BPM, dónde caen bombo y caja y sus partes (intro, verso, estribillo, puente, outro). Si escribes <b>[Estribillo]</b>, esas barras se colocan donde empieza el estribillo del beat, y abajo ves si te faltan barras o te pasas.</p>
     </details>
 
     <div id="takesBox" hidden>
@@ -555,7 +571,26 @@ function touch() {
   $('saved').lastChild.textContent = 'Guardando…';
   clearTimeout(saveT); saveT = setTimeout(saveLocal, 400);
 }
-let rows = [];
+let rows = [], SECS = [];
+const SEC_TYPES = [['estribillo', /estribillo|coro|hook|chorus|estrib/i], ['verso', /verso|verse|estrofa/i], ['puente', /puente|bridge|pre/i], ['intro', /intro/i], ['outro', /outro|final|cierre/i]];
+function secType(l) { const n = l.replace(/[\[\]]/g, ''); const t = SEC_TYPES.find(([, re]) => re.test(n)); return t ? t[0] : 'otro'; }
+function beatParts() {
+  if (!AN || !AN.parts || !audio.src || Math.abs(AN.bpm - (+$('bpm').value || 90)) > 1) return null;
+  const s = getSong(S.cur), shift = Math.round((((s && s.off != null) ? s.off : AN.off) - AN.off) / (240 / AN.bpm));
+  return AN.parts.map(p => ({ ...p, start: p.start - shift, type: p.label === 'Loop' ? 'loop' : p.label.toLowerCase() }));
+}
+function renderSecFit() {
+  const box = $('secfit'); if (!box) return;
+  const items = SECS.filter(x => x.part);
+  if (!items.length) { box.hidden = true; return; }
+  const intro = +$('intro').value || 0;
+  box.hidden = false;
+  box.innerHTML = '<h3>Tu letra sobre el beat</h3>' + items.map(x => {
+    const L = x.part.len, d = L - x.n;
+    const st = d === 0 ? '<span class="pill ok">Completo</span>' : d > 0 ? `<span class="pill">Faltan ${d}</span>` : `<span class="pill bad">Te pasas ${-d}</span>`;
+    return `<div class="sf"><span class="sf-n">${esc(x.name)}</span><span class="sf-m">${x.part.label} del beat · compás ${x.part.start - intro + 1}–${x.part.start - intro + L} · ${x.n}/${L} barras</span>${st}</div>`;
+  }).join('');
+}
 function layout() {
   ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
   const lines = ta.value.split('\n');
@@ -563,12 +598,24 @@ function layout() {
   const col = {}; let k = 0; Object.keys(cnt).filter(r => cnt[r] > 1).forEach(r => { col[r] = 'h' + (k++ % 6); });
   let bar = 0, stanzas = 0, inSt = false, syl = 0;
   const bpm = +$('bpm').value || 90, cap = Math.round(14 * Math.min(1.4, Math.max(0.7, 90 / bpm)));
+  // cada parte de la letra se coloca en su parte del beat ([Estribillo] → donde empieza el estribillo del beat)
+  const intro = +$('intro').value || 0, P = beatParts();
+  let ptr = intro, curSec = null; SECS = [];
   rows = lines.map(l => {
     if (!l.trim()) { inSt = false; return { l, bar: null }; }
-    if (isSec(l)) { inSt = false; return { l, sec: true, bar: null }; }
+    if (isSec(l)) {
+      inSt = false; const type = secType(l);
+      let part = null;
+      if (P) { part = P.find(p => p.start >= ptr - 1 && p.type === type && !SECS.some(x => x.part === p)) || null; if (part) ptr = part.start; }
+      curSec = { name: l.trim().replace(/^\[|\]$/g, ''), type, part, n: 0, from: ptr };
+      SECS.push(curSec);
+      return { l, sec: true, bar: null, secInfo: curSec };
+    }
     if (!inSt) { stanzas++; inSt = true; }
-    bar++; const rh = lineRhyme(l), sy = syllables(l); syl += sy;
-    return { l, bar, syl: sy, rh, c: col[rh], over: sy > cap };
+    const bb = ptr++; bar++; if (curSec) curSec.n++;
+    const rh = lineRhyme(l), sy = syllables(l); syl += sy;
+    const pp = P ? P.find(p => bb >= p.start && bb < p.start + p.len) : null;
+    return { l, bar: bb - intro + 1, bb, part: pp, syl: sy, rh, c: col[rh], over: sy > cap };
   });
   mirror.innerHTML = rows.map((r, i) => {
     if (r.sec) return `<div><span class="sec">${esc(r.l)}</span></div>`;
@@ -580,13 +627,15 @@ function layout() {
   const ds = mirror.children, bh = [], gh = [];
   rows.forEach((r, i) => {
     const d = ds[i]; r.top = d.offsetTop; r.el = d;
-    if (r.bar) {
+    if (r.sec && r.secInfo && r.secInfo.part) gh.push(`<span class="seclen" style="top:${r.top}px">${r.secInfo.part.len} c.</span>`);
+    if (r.bb != null) {
       bh.push(`<i style="top:${r.top}px">${r.bar}</i>`);
       gh.push(`<span class="${r.over ? 'over' : ''}" style="top:${r.top}px">${r.syl}<u class="${r.c || ''}"></u></span>`);
     }
   });
   $('bars').innerHTML = bh.join(''); $('gut').innerHTML = gh.join('');
   const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  renderSecFit();
   $('stats').innerHTML = bar ? `<span><b>${bar}</b> barras</span><span><b>${stanzas}</b> ${stanzas === 1 ? 'estrofa' : 'estrofas'}</span><span><b>${Math.round(syl / bar)}</b> sílabas por barra</span>${top && top[1] > 1 ? `<span>rima más usada <b class="vow">${top[0]}</b></span>` : ''}<span>cómodo a ${bpm} BPM: hasta <b>${cap}</b></span>` : '<span>Empieza a escribir y aquí verás el resumen del tema.</span>';
   if (flowOn) renderFlow();
   markNow(true);
@@ -689,7 +738,7 @@ const idbPut = (blob, name, an) => { idbDo('beat', 'readwrite', st => { st.put({
 async function loadBeatFor(id) {
   const r = (await idbDo('beat', 'readonly', st => st.get(id))) || (!audio.src ? await idbDo('beat', 'readonly', st => st.get('last')) : null);
   if (r && r.blob && r.name !== $('beatName').textContent) setBeat(r.blob, r.name);
-  if (r && r.blob) { if (r.an && r.an.v === 1) { AN = r.an; showAnalysis(false); } else if (!AN || AN.name !== r.name) runAnalysis(r.blob, r.name, false); }
+  if (r && r.blob) { if (r.an && r.an.v === 2) { AN = r.an; showAnalysis(false); } else if (!AN || AN.name !== r.name) runAnalysis(r.blob, r.name, false); }
 }
 
 // ───── Análisis del beat ─────
@@ -708,7 +757,7 @@ async function runAnalysis(blob, name, apply) {
       const s = curSong(true);
       if (s) { s.bpm = an.bpm; s.intro = an.intro; s.off = an.off; $('bpm').value = an.bpm; $('intro').value = an.intro; touch(); layout(); }
     }
-    showAnalysis(apply);
+    showAnalysis(apply); layout();
   } catch (e) { $('aiText').textContent = 'No he podido analizar este audio. Pon el BPM a mano o con Tap.'; }
 }
 function showAnalysis(applied) {
@@ -716,15 +765,24 @@ function showAnalysis(applied) {
   $('ainfo').hidden = false;
   const s = getSong(S.cur), intro = s ? s.intro || 0 : AN.intro;
   const ch = AN.changes.map(c => c.bar - intro + 1).filter(b => b > 1).slice(0, 4);
-  $('aiText').innerHTML = `<span><b>${AN.bpm} BPM</b> · batería desde el compás ${AN.intro + 1}${AN.intro ? ` (${AN.intro} de intro)` : ''}${ch.length ? ` · cambia en tu barra ${ch.join(', ')}` : ''}${AN.conf < 0.4 ? ' · no veo clara la caja, revisa el BPM' : ''}${applied ? ' · aplicado' : ''}</span>`;
+  $('aiText').innerHTML = `<span><b>${AN.bpm} BPM</b> · batería desde el compás ${AN.intro + 1}${AN.intro ? ` (${AN.intro} de intro)` : ''}${AN.parts && AN.parts.some(p => p.label === 'Loop') ? ' · no cambia: es un loop' : ''}${AN.conf < 0.4 ? ' · no veo clara la caja, revisa el BPM' : ''}${applied ? ' · aplicado' : ''}</span>`;
   const row = (lab, arr, cls) => `<span>${lab}</span>` + arr.map((v, i) => `<i class="${i % 4 === 0 && i ? 'q ' : ''}${v >= 0.5 ? cls : v >= 0.25 ? cls + ' w' : ''}"></i>`).join('');
   $('aiPat').innerHTML = row('Bombo', AN.pat.k, 'k') + row('Caja', AN.pat.s, 's');
+  const parts = AN.parts || [], tot = parts.reduce((a, p) => a + p.len, 0) || 1;
+  $('aiParts').innerHTML = parts.map(p => `<div class="${p.label}" style="flex:${p.len}" title="${p.label}: ${p.len} compases">${p.len >= 12 ? p.label + ' ' + p.len : p.len >= 6 ? ({ Estribillo: 'Estr.', Verso: 'Verso', Puente: 'Puente', Intro: 'Intro', Outro: 'Outro', Loop: 'Loop' }[p.label] || p.label) + ' ' + p.len : p.len >= 3 ? p.label.slice(0, 3) : ''}</div>`).join('');
+  const content = ta.value.split('\n').filter(l => l.trim() && !isSec(l)).length;
+  $('bStruct').hidden = !(parts.some(p => p.label !== 'Intro' && p.label !== 'Loop') && content === 0);
 }
 function scaleBpm(f) {
   const s = curSong(true); if (!s) return;
   s.bpm = Math.round((+$('bpm').value || 90) * f * 10) / 10; s.intro = Math.round((+$('intro').value || 0) * f);
   $('bpm').value = s.bpm; $('intro').value = s.intro; touch(); layout(); toast(s.bpm + ' BPM');
 }
+$('bStruct').onclick = () => {
+  const parts = (AN && AN.parts) || [], cnt = {};
+  const txt = parts.filter(p => p.label !== 'Intro').map(p => { cnt[p.label] = (cnt[p.label] || 0) + 1; const name = p.label === 'Verso' ? 'Verso ' + cnt[p.label] : p.label; return `[${name}]\n`; }).join('\n');
+  ta.value = txt; ta.dispatchEvent(new Event('input')); $('bStruct').hidden = true; toast('Partes puestas: escribe debajo de cada una');
+};
 $('bpmHalf').onclick = () => scaleBpm(0.5); $('bpmDouble').onclick = () => scaleBpm(2);
 
 // ───── Flow: cada barra sobre los 16 pasos del compás ─────
@@ -771,7 +829,7 @@ function drumsFor(bar) {
 function renderFlow() {
   if (!flowOn) return;
   const box = $('flowList'); box.innerHTML = '';
-  const lyricRows = rows.filter(r => r.bar);
+  const lyricRows = rows.filter(r => r.bb != null);
   if (!lyricRows.length) { box.innerHTML = `<div class="empty">${ic('grid')}<div>Escribe alguna barra para verla sobre el compás.</div></div>`; return; }
   let src = 'def';
   lyricRows.forEach(r => {
@@ -803,7 +861,7 @@ function renderFlow() {
       s2 = `<span>En la caja del ${Math.floor(first / 4) + 1}: «${esc(parts[at])}»${at !== ri && sv === rv ? ' · misma vocal que tu rima' : ''}</span>`;
     }
     const card = document.createElement('div'); card.className = 'card fbar'; card.dataset.bar = r.bar;
-    card.innerHTML = `<div class="fb-top"><em>${r.bar}</em><p>${esc(r.l)}</p></div><div class="fgrid">${grid}</div><div class="fb-msg">${d.src === 'break' ? '<span class="pill">Aquí el beat va sin batería</span>' : pill + `<span>«${esc(lw)}» cae en la caja del ${Math.floor(T / 4) + 1}</span>` + s2}</div>`;
+    card.innerHTML = `<div class="fb-top"><em>${r.bar}</em><p>${esc(r.l)}</p>${r.part ? `<span class="pill">${r.part.label}</span>` : ''}</div><div class="fgrid">${grid}</div><div class="fb-msg">${d.src === 'break' ? '<span class="pill">Aquí el beat va sin batería</span>' : pill + `<span>«${esc(lw)}» cae en la caja del ${Math.floor(T / 4) + 1}</span>` + s2}</div>`;
     card.onclick = () => { const li = rows.indexOf(r); setFlow(false); const off = ta.value.split('\n').slice(0, li).join('\n').length + (li ? 1 : 0); ta.focus(); ta.setSelectionRange(off + r.l.length, off + r.l.length); };
     box.appendChild(card);
   });
